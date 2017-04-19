@@ -205,43 +205,16 @@ int logicalShift(int x, int n)
  *   Max ops: 40
  *   Rating: 4
  */
-int bitCount(int x)
-{
-    int mask = 0x01;
-    int numOfBits = 0;
-    numOfBits = numOfBits + (x & mask);
-    numOfBits = numOfBits + ((x >> 1) & mask);
-    numOfBits = numOfBits + ((x >> 2) & mask);
-    numOfBits = numOfBits + ((x >> 3) & mask);
-    numOfBits = numOfBits + ((x >> 4) & mask);
-    numOfBits = numOfBits + ((x >> 5) & mask);
-    numOfBits = numOfBits + ((x >> 6) & mask);
-    numOfBits = numOfBits + ((x >> 7) & mask);
-    numOfBits = numOfBits + ((x >> 8) & mask);
-    numOfBits = numOfBits + ((x >> 9) & mask);
-    numOfBits = numOfBits + ((x >> 10) & mask);
-    numOfBits = numOfBits + ((x >> 11) & mask);
-    numOfBits = numOfBits + ((x >> 12) & mask);
-    numOfBits = numOfBits + ((x >> 13) & mask);
-    numOfBits = numOfBits + ((x >> 14) & mask);
-    numOfBits = numOfBits + ((x >> 15) & mask);
-    numOfBits = numOfBits + ((x >> 16) & mask);
-    numOfBits = numOfBits + ((x >> 17) & mask);
-    numOfBits = numOfBits + ((x >> 18) & mask);
-    numOfBits = numOfBits + ((x >> 19) & mask);
-    numOfBits = numOfBits + ((x >> 20) & mask);
-    numOfBits = numOfBits + ((x >> 21) & mask);
-    numOfBits = numOfBits + ((x >> 22) & mask);
-    numOfBits = numOfBits + ((x >> 23) & mask);
-    numOfBits = numOfBits + ((x >> 24) & mask);
-    numOfBits = numOfBits + ((x >> 25) & mask);
-    numOfBits = numOfBits + ((x >> 26) & mask);
-    numOfBits = numOfBits + ((x >> 27) & mask);
-    numOfBits = numOfBits + ((x >> 28) & mask);
-    numOfBits = numOfBits + (((x >> 29) & mask));
-    numOfBits = numOfBits + (((x >> 30) & mask));
-    numOfBits = numOfBits + (((x >> 31) & mask));
-    return (numOfBits);
+int bitCount(int x) {
+	int twoLsbMask = 0x11 | (0x11 << 8);
+	int sumMask = 0xf | (0xf << 8);
+	int mask = twoLsbMask | (twoLsbMask << 16);
+
+	// count the bits in x, without the zero bits
+	int count  = x & mask + ((x >> 1) & mask) + ((x >> 2) & mask) + ((x >> 3) & mask) + (count >> 16);
+	count = (count & sumMask) + ((count >> 4) & sumMask);
+
+	return((count + (count >> 8)) & 0x3f);
 }
 /*
  * bang - Compute !x without using !
@@ -284,7 +257,13 @@ int fitsBits(int x, int n)
  *   Max ops: 15
  *   Rating: 2
  */
-int divpwr2(int x, int n) { return x >> n; }
+int divpwr2(int x, int n) {
+	// get the msb (clear the rest of the bits after shifting)
+	int msb = (x >> 31) & 1;
+	int fill = (msb << 31) >> 31;
+	int power = msb << n;
+	return ((x + power + fill) >> n);
+}
 /*
  * negate - return -x
  *   Example: negate(1) = -1.
@@ -300,7 +279,9 @@ int negate(int x) { return ~x + 1; }
  *   Max ops: 8
  *   Rating: 3
  */
-int isPositive(int x) { return !(x >> 31) & 1; }
+int isPositive(int x) {
+	return !(x >> 31) & !!x;
+}
 /*
  * isLessOrEqual - if x <= y  then return 1, else return 0
  *   Example: isLessOrEqual(4,5)  .
@@ -308,13 +289,15 @@ int isPositive(int x) { return !(x >> 31) & 1; }
  *   Max ops: 24
  *   Rating: 3
  */
-int isLessOrEqual(int x, int y)
-{
-    /*
-     * y + (~x + 1) => y - x
-     * shift to get the msb, than check if it's 1 or 0.
-     */
-    return !((y + (~x + 1)) >> 31);
+int isLessOrEqual(int x, int y) {
+	int signOfY = (y >> 31) & 1;
+	int signOfX = (x >> 31) & 1;
+
+	// check if x is less or equal to y
+	int calc = (!(signOfY ^ signOfX)) & (((x + ~y) >> 31) & 1);
+
+	// if x <=y, return 1. oterwise - 0.
+	return calc | ((!signOfY) & signOfX);
 }
 /*
  * ilog2 - return floor(log base 2 of x), where x > 0
@@ -344,7 +327,18 @@ int ilog2(int x)
  *   Max ops: 10
  *   Rating: 2
  */
-unsigned float_neg(unsigned uf) { return uf; }
+unsigned float_neg(unsigned uf) {
+	unsigned exponent = uf >> 23 & 0xFF;
+	unsigned fraction = uf & 0x7FFFFF;
+	unsigned tmin = 0x1 << 31;
+	// if exponent is all ones, and the fraction is non zero,
+	// then it's a NaN.
+	if ((exponent==0xFF) && (!!fraction)) {
+		return uf;
+	}
+
+	return uf^tmin;
+}
 /*
  * float_i2f - Return bit-level equivalent of expression (float) x
  *   Result is returned as unsigned int, but
@@ -366,4 +360,33 @@ unsigned float_i2f(int x) { return x; }
  *   Max ops: 30
  *   Rating: 4
  */
-unsigned float_twice(unsigned uf) { return uf; }
+unsigned float_twice(unsigned uf) {
+	unsigned exponent = uf >> 23 & 0xFF;
+	unsigned fraction = uf & 0x7FFFFF;
+	unsigned sign_bit = uf & (1 << 31);
+
+	// either infinity, NaN or just can't increase the number anymore
+	if (exponent == 255) {
+		return uf;
+	}
+
+	// number is zero, 0 * 2 is still 0...
+	if (exponent == 0 && fraction == 0) {
+		return uf;
+	}
+
+	// increase the exponent (i.e: multiply by two)
+	if (exponent) {
+		exponent++;
+	} else if (fraction == 0x7fffff) {
+		// fraction is full, exponent is empty
+		fraction--;
+		exponent++;
+	} else {
+		// fraction is not full and the exponent is not full,
+		// so increase the fraction part
+		fraction <<= 1;
+	}
+
+	return sign_bit | (exponent << 23) | fraction;
+}
