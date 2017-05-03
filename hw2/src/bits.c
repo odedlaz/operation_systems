@@ -143,7 +143,16 @@ NOTES:
  *   Rating: 2
  */
 unsigned float_neg(unsigned uf) {
- return 2;
+    unsigned exponent = uf >> 23 & 0xFF;
+    unsigned fraction = uf & 0x7FFFFF;
+    unsigned tmin = 0x1 << 31;
+    // if exponent is all ones, and the fraction is non zero,
+    // then it's a NaN.
+    if ((exponent==0xFF) && (!!fraction)) {
+        return uf;
+    }
+
+    return uf^tmin;
 }
 /* 
  * float_i2f - Return bit-level equivalent of expression (float) x
@@ -155,7 +164,15 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-  return 2;
+    if (x==0)
+        return 0;
+    bool isNeg = false;
+    if (x<0) {
+        isNeg = true;
+        x = ~x+1;
+    }
+    //from here x is postive for shizzle
+    return 2;
 }
 /* 
  * float_twice - Return bit-level equivalent of expression 2*f for
@@ -169,7 +186,34 @@ unsigned float_i2f(int x) {
  *   Rating: 4
  */
 unsigned float_twice(unsigned uf) {
-  return 2;
+    unsigned exponent = uf >> 23 & 0xFF;
+    unsigned fraction = uf & 0x7FFFFF;
+    unsigned sign_bit = uf & (1 << 31);
+
+    // either infinity, NaN or just can't increase the number anymore
+    if (exponent == 255) {
+        return uf;
+    }
+
+    // number is zero, 0 * 2 is still 0...
+    if (exponent == 0 && fraction == 0) {
+        return uf;
+    }
+
+    // increase the exponent (i.e: multiply by two)
+    if (exponent) {
+        exponent++;
+    } else if (fraction == 0x7fffff) {
+        // fraction is full, exponent is empty
+        fraction--;
+        exponent++;
+    } else {
+        // fraction is not full and the exponent is not full,
+        // so increase the fraction part
+        fraction <<= 1;
+    }
+
+    return sign_bit | (exponent << 23) | fraction;
 
 }
 /* 
