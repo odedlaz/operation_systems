@@ -165,14 +165,20 @@ unsigned float_neg(unsigned uf) {
  */
 unsigned float_i2f(int x) {
     if (x==0)
-        return 0;
-    bool isNeg = false;
-    if (x<0) {
-        isNeg = true;
+        return 0;u
+    unsigned int sign = (1<<31) & x;
+    if (sign)
         x = ~x+1;
-    }
     //from here x is postive for shizzle
-    return 2;
+    unsigned int exp=0;
+    unsigned int absX = x;
+    while ( x >>= 1)//log 2
+        exp++;
+    unsigned int biasedExp = exp+127;//what if bigger than 256?
+    biasedExp = biasedExp<<23;
+    unsigned int frac = ((1<<exp)-1)&absX;//mask in size of exponent
+    frac = frac<<(23-exp);//moves fraction to the 23 bit
+    return sign | biasedExp | frac;
 }
 /* 
  * float_twice - Return bit-level equivalent of expression 2*f for
