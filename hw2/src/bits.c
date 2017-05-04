@@ -166,7 +166,6 @@ unsigned float_neg(unsigned uf) {
 unsigned float_i2f(int x) {
 	// maximum e
 	int e = 158;
-	int frac_size = 23;
 
 	// sign bit bask
     int mask = 1 << 31;
@@ -178,7 +177,7 @@ unsigned float_i2f(int x) {
 
 	// if x is tmin, return the same as float
     if (x == mask) {
-        return mask | (e << frac_size);
+        return mask | (e << 23);
 	}
 
 	int sign = x & mask;
@@ -197,7 +196,7 @@ unsigned float_i2f(int x) {
         frac++;
 	}
 
-    return sign + (e << frac_size) + frac;
+    return sign + (e << 23) + frac;
 }
 /*
  * float_twice - Return bit-level equivalent of expression 2*f for
@@ -253,7 +252,29 @@ unsigned float_twice(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_half(unsigned uf) {
-  return 2;
+    unsigned sign = uf & (0x80000000);
+    unsigned E = uf >> 23 & 0xff;
+    unsigned frac = uf & 0x7fffff;
+	unsigned frac_size = 23;
+
+    if(E == 0xff) {
+        return uf;
+	}
+
+	if (E > 1) {
+        return sign | (E-1) << frac_size | frac;
+	}
+
+	if (E == 1) {
+		frac |= 1 << frac_size;
+	}
+
+	if ((frac & 3) == 3) {
+		frac++;
+	}
+
+	frac >>= 1;
+	return sign | frac;
 }
 /*
  * float_f2i - Return bit-level equivalent of expression (int) f
@@ -270,7 +291,6 @@ unsigned float_half(unsigned uf) {
 int float_f2i(unsigned uf) {
   int exponent = (uf >> 23) & 0xff;
   int E = exponent - 127;
-  int frac = uf & 0x7fffff;
 
   if(exponent == 0x7f800000) {
     return 1 << 31;
@@ -286,12 +306,8 @@ int float_f2i(unsigned uf) {
     return 1 << 31;
   }
 
-  frac = frac | 0x800000;
-  if (E >= 23) {
-    frac = frac << (E - 23);
-  } else {
-    frac = frac >> (23 - E);
-  }
+  int frac = (uf & 0x7fffff) | 0x800000;
+  frac = E >= 23 ? frac << (E - 23) : frac >> (23 - E);
 
   if((uf >> 31) & 1) {
     return ~frac + 1;
