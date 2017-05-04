@@ -263,5 +263,7 @@ int float_f2i(unsigned uf) {
  *   Rating: 2
  */
 unsigned float_abs(unsigned uf) {
-	return 2;
+	// clear msb (sign bit), don't change anything else
+	unsigned mask = -1 >> 1;
+	return uf & mask;
 }
