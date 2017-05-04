@@ -143,12 +143,12 @@ NOTES:
  *   Rating: 2
  */
 unsigned float_neg(unsigned uf) {
-    unsigned exponent = uf >> 23 & 0xFF;
-    unsigned fraction = uf & 0x7FFFFF;
+    unsigned exponent = uf >> 23 & 0xff;
+    unsigned fraction = uf & 0x7fffff;
     unsigned tmin = 0x1 << 31;
     // if exponent is all ones, and the fraction is non zero,
     // then it's a NaN.
-    if ((exponent==0xFF) && (!!fraction)) {
+    if ((exponent==0xff) && (!!fraction)) {
         return uf;
     }
 
@@ -193,7 +193,7 @@ unsigned float_i2f(int x) {
     }
 
     int frac = (x & ~mask) >> 8;
-    if (x & 0x80 && ((x & 0x7F) > 0 || frac & 1)) {
+    if (x & 0x80 && ((x & 0x7f) > 0 || frac & 1)) {
         frac++;
 	}
 
@@ -211,8 +211,8 @@ unsigned float_i2f(int x) {
  *   Rating: 4
  */
 unsigned float_twice(unsigned uf) {
-    unsigned exponent = uf >> 23 & 0xFF;
-    unsigned fraction = uf & 0x7FFFFF;
+    unsigned exponent = uf >> 23 & 0xff;
+    unsigned fraction = uf & 0x7fffff;
     unsigned sign_bit = uf & (1 << 31);
 
     // either infinity, NaN or just can't increase the number anymore
@@ -321,6 +321,6 @@ unsigned float_abs(unsigned uf) {
 		return uf;
 	}
 
-	unsigned mask = 0x7FFFFFFF;
+	unsigned mask = 0x7fffffff;
 	return uf & mask;
 }
