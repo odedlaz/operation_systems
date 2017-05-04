@@ -166,6 +166,7 @@ unsigned float_neg(unsigned uf) {
 unsigned float_i2f(int x) {
 	// maximum e
 	int e = 158;
+	int frac_size = 23;
 
 	// sign bit bask
     int mask = 1 << 31;
@@ -177,7 +178,7 @@ unsigned float_i2f(int x) {
 
 	// if x is tmin, return the same as float
     if (x == mask) {
-        return mask | (158 << 23);
+        return mask | (e << frac_size);
 	}
 
 	int sign = x & mask;
@@ -196,7 +197,7 @@ unsigned float_i2f(int x) {
         frac++;
 	}
 
-    return sign + (e << 23) + frac;
+    return sign + (e << frac_size) + frac;
 }
 /*
  * float_twice - Return bit-level equivalent of expression 2*f for
