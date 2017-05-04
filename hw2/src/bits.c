@@ -255,18 +255,17 @@ unsigned float_half(unsigned uf) {
     unsigned sign = uf & (0x80000000);
     unsigned E = uf >> 23 & 0xff;
     unsigned frac = uf & 0x7fffff;
-	unsigned frac_size = 23;
 
     if(E == 0xff) {
         return uf;
 	}
 
 	if (E > 1) {
-        return sign | (E-1) << frac_size | frac;
+        return sign | (E-1) << 23 | frac;
 	}
 
 	if (E == 1) {
-		frac |= 1 << frac_size;
+		frac |= 1 << 23;
 	}
 
 	if ((frac & 3) == 3) {
