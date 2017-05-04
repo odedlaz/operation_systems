@@ -164,21 +164,39 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-    if (x==0)
-        return 0;
-    unsigned int sign = (1<<31) & x;
-    if (sign)
-        x = ~x+1;
-    //from here x is postive for shizzle
-    unsigned int exp=0;
-    unsigned int absX = x;
-    while ( x >>= 1)//log 2
-        exp++;
-    unsigned int biasedExp = exp+127;//what if bigger than 256?
-    biasedExp = biasedExp<<23;
-    unsigned int frac = ((1<<exp)-1)&absX;//mask in size of exponent
-    frac = frac<<(23-exp);//moves fraction to the 23 bit
-    return sign | biasedExp | frac;
+	// maximum e
+	int e = 158;
+
+	// sign bit bask
+    int mask = 1 << 31;
+
+	// if x is empty, return now.
+	if (!x) {
+		return 0;
+	}
+
+	// if x is tmin, return the same as float
+    if (x == mask) {
+        return mask | (158 << 23);
+	}
+
+	int sign = x & mask;
+    if (sign) {
+        x = ~x + 1;
+	}
+
+	// calculate e
+    while (!(x & mask)) {
+        x = x << 1;
+        e = e - 1;
+    }
+
+    int frac = (x & ~mask) >> 8;
+    if (x & 0x80 && ((x & 0x7F) > 0 || frac & 1)) {
+        frac++;
+	}
+
+    return sign + (e << 23) + frac;
 }
 /*
  * float_twice - Return bit-level equivalent of expression 2*f for
@@ -249,7 +267,36 @@ unsigned float_half(unsigned uf) {
  *   Rating: 4
  */
 int float_f2i(unsigned uf) {
-  return 2;
+  int exponent = (uf >> 23) & 0xff;
+  int E = exponent - 127;
+  int frac = uf & 0x7fffff;
+
+  if(exponent == 0x7f800000) {
+    return 1 << 31;
+  }
+
+  // if exponent is empty (only a fraction) or zero -> return 0
+  if(!exponent || E < 0) {
+    return 0;
+  }
+
+  // if biased exponent is biggest, return
+  if(E > 30) {
+    return 1 << 31;
+  }
+
+  frac = frac | 0x800000;
+  if (E >= 23) {
+    frac = frac << (E - 23);
+  } else {
+    frac = frac >> (23 - E);
+  }
+
+  if((uf >> 31) & 1) {
+    return ~frac + 1;
+  }
+
+  return frac;
 }
 /*
  * float_abs - Return bit-level equivalent of absolute value of f for
@@ -263,7 +310,16 @@ int float_f2i(unsigned uf) {
  *   Rating: 2
  */
 unsigned float_abs(unsigned uf) {
+
 	// clear msb (sign bit), don't change anything else
-	unsigned mask = -1 >> 1;
+	unsigned exponent = uf >> 23 & 0xff;
+	unsigned fraction = uf & 0x7fffff;
+
+	// if exponent is all ones, and the fraction is non zero, then it's a nan.
+	if ((exponent==0xff) && (!!fraction)) {
+		return uf;
+	}
+
+	unsigned mask = 0x7FFFFFFF;
 	return uf & mask;
 }
