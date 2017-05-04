@@ -1,7 +1,8 @@
 /*
  * CS:APP Data Lab
  *
- * <Please put your name and userid here>
+ * Afik Bar 311121289
+ * Oded Lazar 201285509
  *
  * bits.c - Source file with your solutions to the Lab.
  *          This is the file you will hand in to your instructor.
