@@ -142,17 +142,19 @@ NOTES:
  *   Max ops: 10
  *   Rating: 2
  */
+
+
 unsigned float_neg(unsigned uf) {
-    unsigned exponent = uf >> 23 & 0xff;
-    unsigned fraction = uf & 0x7fffff;
-    unsigned tmin = 0x1 << 31;
+  unsigned exponent = uf >> 23 & 0xff;
+  unsigned fraction = uf & 0x7fffff;
+  unsigned tmin = 0x1 << 31;
 
-    // handle NaN
-    if ((exponent==0xff) && (!!fraction)) {
-        return uf;
-    }
+  // handle NaN
+  if ((exponent==0xff) && (!!fraction)) {
+    return uf;
+  }
 
-    return uf^tmin;
+  return uf^tmin;
 }
 /*
  * float_i2f - Return bit-level equivalent of expression (float) x
@@ -164,41 +166,41 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-	int e = 158;
+  int exponent = 158;
 
-	// sign bit mask
-    int mask = 1 << 31;
+  // sign bit mask
+  int mask = 1 << 31;
 
-	// if x is empty, return now.
-	if (!x) {
-		return 0;
-	}
+  // if x is empty, return now.
+  if (!x) {
+    return 0;
+  }
 
-	// if x is tmin, return the same as float
-    if (x == mask) {
-        return mask | (e << 23);
-	}
+  // if x is tmin, return the same as float
+  if (x == mask) {
+    return mask | (exponent << 23);
+  }
 
-	int sign = x & mask;
-    if (sign) {
-        x = ~x + 1;
-	}
+  int sign = x & mask;
+  if (sign) {
+    x = ~x + 1;
+  }
 
-	// calculate e, and move the frac left while doing so
-    while (!(x & mask)) {
-        x = x << 1;
-        e = e - 1;
-    }
+  // calculate exponent, and move the frac left while doing so
+  while (!(x & mask)) {
+    x = x << 1;
+    exponent = exponent - 1;
+  }
 
-	// remove the exponent part
-    int frac = (x & ~mask) >> 8;
+  // remove the exponent part
+  int fraction = (x & ~mask) >> 8;
 
-	// increase the frac size for edge cases
-    if (x & 0x80 && ((x & 0x7f) > 0 || frac & 1)) {
-        frac++;
-	}
+  // increase the fraction size for edge cases
+  if (x & 0x80 && ((x & 0x7f) > 0 || fraction & 1)) {
+    fraction++;
+  }
 
-    return sign + (e << 23) + frac;
+  return sign + (exponent << 23) + fraction;
 }
 /*
  * float_twice - Return bit-level equivalent of expression 2*f for
@@ -212,35 +214,34 @@ unsigned float_i2f(int x) {
  *   Rating: 4
  */
 unsigned float_twice(unsigned uf) {
-    unsigned exponent = uf >> 23 & 0xff;
-    unsigned fraction = uf & 0x7fffff;
-    unsigned sign_bit = uf & (1 << 31);
+  unsigned exponent = uf >> 23 & 0xff;
+  unsigned fraction = uf & 0x7fffff;
+  unsigned sign = uf & (1 << 31);
 
-    // either infinity, NaN or just can't increase the number anymore
-    if (exponent == 0xff) {
-        return uf;
-    }
+  // either infinity, NaN or just can't increase the number anymore
+  if (exponent == 0xff) {
+    return uf;
+  }
 
-    // number is zero...
-    if (exponent == 0 && fraction == 0) {
-        return uf;
-    }
+  // number is zero...
+  if (exponent == 0 && fraction == 0) {
+    return uf;
+  }
 
-    // increase the exponent (i.e: multiply by two)
-    if (exponent) {
-        exponent++;
-    } else if (fraction == 0x7fffff) {
-        // fraction is full, exponent is empty
-        fraction--;
-        exponent++;
-    } else {
-        // fraction is not full and the exponent is not full,
-        // so increase the fraction part
-        fraction <<= 1;
-    }
+  // increase the exponent (i.e: multiply by two)
+  if (exponent) {
+    exponent++;
+  } else if (fraction == 0x7fffff) {
+    // fraction is full, exponent is empty
+    fraction--;
+    exponent++;
+  } else {
+    // fraction is not full and the exponent is not full,
+    // so increase the fraction part
+    fraction <<= 1;
+  }
 
-    return sign_bit | (exponent << 23) | fraction;
-
+  return sign | (exponent << 23) | fraction;
 }
 /*
  * float_half - Return bit-level equivalent of expression 0.5*f for
@@ -254,37 +255,37 @@ unsigned float_twice(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_half(unsigned uf) {
-    unsigned sign = uf & (0x80000000);
-    unsigned exponent = uf >> 23 & 0xff;
-    unsigned frac = uf & 0x7fffff;
+  unsigned sign = uf & (0x80000000);
+  unsigned exponent = uf >> 23 & 0xff;
+  unsigned fraction = uf & 0x7fffff;
 
-	// infinity or NaN, so we don't care.
-    if(exponent == 0xff) {
-        return uf;
-	}
+  // infinity or NaN, so we don't care.
+  if (exponent == 0xff) {
+    return uf;
+  }
 
-	// decrease the exponent and return
-	if (exponent > 1) {
-        return sign | (exponent-1) << 23 | frac;
-	}
+  // decrease the exponent and return
+  if (exponent > 1) {
+    return sign | (exponent-1) << 23 | fraction;
+  }
 
-	// from now on, we discard the exponent because everything is zero
-	// if the exponent is 1, we add it to the frac part,
-	// and later we cut it in half.
-	if (exponent == 1) {
-		frac |= 1 << 23;
-	}
+  // from now on, we discard the exponent because everything is zero
+  // if the exponent is 1, we add it to the fraction part,
+  // and later we cut it in half.
+  if (exponent == 1) {
+    fraction |= 1 << 23;
+  }
 
-	// if the number is 3, half is 2 and not 1
-	// so we need to increase the frac and later cut it in half
-	if ((frac & 3) == 3) {
-		frac++;
-	}
+  // if the number is 3, half is 2 and not 1
+  // so we need to increase the fraction and later cut it in half
+  if ((fraction & 3) == 3) {
+    fraction++;
+  }
 
-	// cut in half
-	frac >>= 1;
+  // cut in half
+  fraction >>= 1;
 
-	return sign | frac;
+  return sign | fraction;
 }
 /*
  * float_f2i - Return bit-level equivalent of expression (int) f
@@ -300,27 +301,27 @@ unsigned float_half(unsigned uf) {
  */
 int float_f2i(unsigned uf) {
   int exponent = (uf >> 23) & 0xff;
-  int E = exponent - 127;
+  int exponentBias = exponent - 127;
 
-  if(exponent == 0x7f800000) {
-    return 1 << 31;
+  if (exponent == 0x7f800000) {
+	return 1 << 31;
   }
 
   // if exponent is empty (only a fraction) or zero -> return 0
-  if(!exponent || E < 0) {
-    return 0;
+  if (!exponent || exponentBias < 0) {
+	return 0;
   }
 
   // if biased exponent is biggest, return
-  if(E > 30) {
-    return 1 << 31;
+  if (exponentBias > 30) {
+	return 1 << 31;
   }
 
   int frac = (uf & 0x7fffff) | 0x800000;
-  frac = E >= 23 ? frac << (E - 23) : frac >> (23 - E);
+  frac = exponentBias >= 23 ? frac << (exponentBias - 23) : frac >> (23 - exponentBias);
 
-  if((uf >> 31) & 1) {
-    return ~frac + 1;
+  if ((uf >> 31) & 1) {
+	return ~frac + 1;
   }
 
   return frac;
@@ -337,15 +338,15 @@ int float_f2i(unsigned uf) {
  *   Rating: 2
  */
 unsigned float_abs(unsigned uf) {
-	unsigned exponent = uf >> 23 & 0xff;
-	unsigned fraction = uf & 0x7fffff;
+  unsigned exponent = uf >> 23 & 0xff;
+  unsigned fraction = uf & 0x7fffff;
 
-	// if exponent is all ones, and the fraction is non zero, then it's a nan.
-	if ((exponent==0xff) && (!!fraction)) {
-		return uf;
-	}
+  // if exponent is all ones, and the fraction is non zero, then it's a nan.
+  if ((exponent==0xff) && (!!fraction)) {
+    return uf;
+  }
 
-	// clear msb (sign bit), don't change anything else
-	unsigned mask = 0x7fffffff;
-	return uf & mask;
+  // clear msb (sign bit), don't change anything else
+  unsigned mask = 0x7fffffff;
+  return uf & mask;
 }
