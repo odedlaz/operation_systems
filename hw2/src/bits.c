@@ -146,8 +146,8 @@ unsigned float_neg(unsigned uf) {
     unsigned exponent = uf >> 23 & 0xff;
     unsigned fraction = uf & 0x7fffff;
     unsigned tmin = 0x1 << 31;
-    // if exponent is all ones, and the fraction is non zero,
-    // then it's a NaN.
+
+    // handle NaN
     if ((exponent==0xff) && (!!fraction)) {
         return uf;
     }
@@ -164,10 +164,9 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-	// maximum e
 	int e = 158;
 
-	// sign bit bask
+	// sign bit mask
     int mask = 1 << 31;
 
 	// if x is empty, return now.
@@ -185,13 +184,16 @@ unsigned float_i2f(int x) {
         x = ~x + 1;
 	}
 
-	// calculate e
+	// calculate e, and move the frac left while doing so
     while (!(x & mask)) {
         x = x << 1;
         e = e - 1;
     }
 
+	// remove the exponent part
     int frac = (x & ~mask) >> 8;
+
+	// increase the frac size for edge cases
     if (x & 0x80 && ((x & 0x7f) > 0 || frac & 1)) {
         frac++;
 	}
@@ -215,11 +217,11 @@ unsigned float_twice(unsigned uf) {
     unsigned sign_bit = uf & (1 << 31);
 
     // either infinity, NaN or just can't increase the number anymore
-    if (exponent == 255) {
+    if (exponent == 0xff) {
         return uf;
     }
 
-    // number is zero, 0 * 2 is still 0...
+    // number is zero...
     if (exponent == 0 && fraction == 0) {
         return uf;
     }
@@ -253,26 +255,35 @@ unsigned float_twice(unsigned uf) {
  */
 unsigned float_half(unsigned uf) {
     unsigned sign = uf & (0x80000000);
-    unsigned E = uf >> 23 & 0xff;
+    unsigned exponent = uf >> 23 & 0xff;
     unsigned frac = uf & 0x7fffff;
 
-    if(E == 0xff) {
+	// infinity or NaN, so we don't care.
+    if(exponent == 0xff) {
         return uf;
 	}
 
-	if (E > 1) {
-        return sign | (E-1) << 23 | frac;
+	// decrease the exponent and return
+	if (exponent > 1) {
+        return sign | (exponent-1) << 23 | frac;
 	}
 
-	if (E == 1) {
+	// from now on, we discard the exponent because everything is zero
+	// if the exponent is 1, we add it to the frac part,
+	// and later we cut it in half.
+	if (exponent == 1) {
 		frac |= 1 << 23;
 	}
 
+	// if the number is 3, half is 2 and not 1
+	// so we need to increase the frac and later cut it in half
 	if ((frac & 3) == 3) {
 		frac++;
 	}
 
+	// cut in half
 	frac >>= 1;
+
 	return sign | frac;
 }
 /*
@@ -326,8 +337,6 @@ int float_f2i(unsigned uf) {
  *   Rating: 2
  */
 unsigned float_abs(unsigned uf) {
-
-	// clear msb (sign bit), don't change anything else
 	unsigned exponent = uf >> 23 & 0xff;
 	unsigned fraction = uf & 0x7fffff;
 
@@ -336,6 +345,7 @@ unsigned float_abs(unsigned uf) {
 		return uf;
 	}
 
+	// clear msb (sign bit), don't change anything else
 	unsigned mask = 0x7fffffff;
 	return uf & mask;
 }
