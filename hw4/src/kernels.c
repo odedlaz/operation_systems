@@ -95,7 +95,8 @@ inline void calculate_top_left_corner(int dim, pixel *src, pixel *dst) {
 }
 
 inline void calculate_top_row(int dim, pixel *src, pixel *dst) {
-  for (int i = 1; i < dim - 1; i++) {
+	int i;
+  for ( i = 1; i < dim - 1; i++) {
     dst[i].red = (src[i].red + src[i - 1].red + src[i + 1].red + src[dim + i - 1].red +
                   src[dim + i].red + src[dim + i + 1].red) /
                  6;
@@ -119,7 +120,8 @@ inline void calculate_top_right_corner(int dim, pixel *src, pixel *dst) {
                        4;
 }
 inline void calculate_left_column(int dim, pixel *src, pixel *dst) {
-  for (int i = 1, j = dim; i < dim - 1; i++, j = dim * i) {
+	int i,j;
+  for ( i = 1, j = dim; i < dim - 1; i++, j = dim * i) {
     dst[j].red = (src[j].red + src[j - dim].red + src[j - dim + 1].red + src[j + 1].red +
                   src[j + dim].red + src[j + dim + 1].red) /
                  6;
@@ -133,7 +135,8 @@ inline void calculate_left_column(int dim, pixel *src, pixel *dst) {
 }
 
 inline void calculate_right_column(int dim, pixel *src, pixel *dst) {
-  for (int i = 1, j = dim + dim - 1; i < dim - 1; i++, j = dim * i + dim - 1) {
+	int i,j;
+  for ( i = 1, j = dim + dim - 1; i < dim - 1; i++, j = dim * i + dim - 1) {
     dst[j].red = (src[j].red + src[j - dim].red + src[j - dim - 1].red + src[j - 1].red +
                   src[j + dim].red + src[j + dim - 1].red) /
                  6;
@@ -154,7 +157,8 @@ inline void calculate_bottom_left_corner(int dim, int j, pixel *src, pixel *dst)
 }
 
 inline void calculate_bottom_row(int dim, int j, pixel *src, pixel *dst) {
-  for (int i = 1; i < dim - 1; i++) {
+  int i;
+  for ( i = 1; i < dim - 1; i++) {
     dst[j + i].red = (src[j + i].red + src[j + i - 1].red + src[j + i - dim - 1].red +
                       src[j + i - dim].red + src[j + i - dim + 1].red + src[j + i + 1].red) /
                      6;
@@ -176,9 +180,10 @@ inline void calculate_bottom_right_corner(int dim, int j, pixel *src, pixel *dst
 }
 
 inline void calculate_middle_block(int dim, pixel *src, pixel *dst) {
-  for (int i = 1, row = dim; i < dim - 1; i++, row = i * dim) {
+	int i,j, row;
+  for ( i = 1, row = dim; i < dim - 1; i++, row = i * dim) {
 
-    for (int j = 1; j < dim - 1; j++) {
+    for ( j = 1; j < dim - 1; j++) {
       dst[row + j].red =
           (src[row + j].red + src[row + j - 1].red + src[row + j + 1].red +
            src[row + j - dim - 1].red + src[row + j - dim].red + src[row + j - dim + 1].red +
